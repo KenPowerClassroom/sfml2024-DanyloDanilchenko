@@ -12,3 +12,17 @@ TEST(ArkanoidCollision, RectsIntersect) {
     EXPECT_TRUE(rectsIntersect(a, b));
     EXPECT_FALSE(rectsIntersect(a, c));
 }
+
+// checkBlockCollisions marks blocks dead and inverts velocity
+TEST(ArkanoidCollision, CheckBlockCollisions) {
+    std::vector<Block> blocks;
+    blocks.push_back(Block{ 50.f, 50.f, true });
+
+    Rect collision{ 52.f, 52.f, 6.f, 6.f };
+    float vel = 4.f;
+
+    checkBlockCollisions(blocks, collision, 16.f, 8.f, vel);
+
+    EXPECT_FALSE(blocks[0].alive);
+    EXPECT_FLOAT_EQ(-4.f, vel);
+}
