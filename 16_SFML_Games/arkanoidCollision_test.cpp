@@ -43,3 +43,24 @@ TEST(ArkanoidCollision, UpdatePhysicsBounceOnEdges) {
     EXPECT_EQ(-10.f, velocityX);
     EXPECT_EQ(-3.f, velocityY);
 }
+
+// updatePhysics handles horizontal and vertical block collisions separately
+TEST(ArkanoidCollision, UpdatePhysicsSeparateCollisions) {
+    std::vector<Block> blocks;
+    blocks.push_back(Block{ 100.f, 50.f, true });
+    blocks.push_back(Block{ 120.f, 120.f, true });
+
+    float blockX = 90.f;
+    float blockY = 110.f;
+    float velocityX = 10.f;
+    float velocityY = 10.f;
+
+    updatePhysics(blockX, blockY, velocityX, velocityY, blocks, 16.f, 8.f,
+        0.f, 0.f, 6.f, 6.f,
+        800, 600);
+
+    EXPECT_FALSE(blocks[0].alive);
+    EXPECT_FALSE(blocks[1].alive);
+    EXPECT_EQ(-10.f, velocityX);
+    EXPECT_EQ(-10.f, velocityY);
+}
