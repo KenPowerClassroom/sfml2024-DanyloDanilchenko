@@ -53,17 +53,17 @@ int arkanoid()
 
     Sprite block[MAX_BLOCKS]; // array of sprites used to draw blocks (max)
 
-    int n=0; // number of blocks created
+    int blockCount = 0; // number of blocks created
     for (int i=1;i<=BLOCK_COLUMNS;i++) // create a grid of blocks: columns
     for (int j=1;j<=BLOCK_ROWS;j++) // and rows
       {
-         block[n].setTexture(t1); // set block texture
-         block[n].setPosition(i*BLOCK_SPACING_X, j*BLOCK_SPACING_Y); // place block at position
-         n++; // increment block count
+         block[blockCount].setTexture(t1); // set block texture
+         block[blockCount].setPosition(i*BLOCK_SPACING_X, j*BLOCK_SPACING_Y); // place block at position
+         blockCount++; // increment block count
       }
 
-    float dx = BALL_VELOCITY_X, dy = BALL_VELOCITY_Y; // ball velocity x and y
-    float x = BALL_START_X, y = BALL_START_Y; // ball position
+    float ballVelX = BALL_VELOCITY_X, ballVelY = BALL_VELOCITY_Y; // ball velocity x and y
+    float ballPosX = BALL_START_X, ballPosY = BALL_START_Y; // ball position
 
     while (app.isOpen()) // main game loop runs until window is closed
     {
@@ -74,25 +74,35 @@ int arkanoid()
              app.close(); // exit
        }
 
-    x+=dx; // move ball horizontally by its velocity
-    for (int i=0;i<n;i++) // check horizontal collisions of ball with each block
-        if ( FloatRect(x+BALL_COLL_OFFSET_X, y+BALL_COLL_OFFSET_Y, BALL_COLL_WIDTH, BALL_COLL_HEIGHT).intersects(block[i].getGlobalBounds()) ) 
-             {block[i].setPosition(BLOCK_REMOVED_X,0); dx=-dx;} // if hit, "remove" block by moving offscreen and reverse horizontal velocity
+    // Horizontal movement step
+    ballPosX += ballVelX; // move ball horizontally by its velocity
+    // create a collision rectangle for the ball based on current position (horizontal check)
+    FloatRect ballCollisionRectH(ballPosX + BALL_COLL_OFFSET_X, ballPosY + BALL_COLL_OFFSET_Y, BALL_COLL_WIDTH, BALL_COLL_HEIGHT);
+    for (int i=0;i<blockCount;i++) // check horizontal collisions of ball with each block
+        if ( ballCollisionRectH.intersects(block[i].getGlobalBounds()) ) 
+             {block[i].setPosition(BLOCK_REMOVED_X,0); ballVelX = -ballVelX;} // if hit, "remove" block and reverse horizontal velocity
 
-    y+=dy; // move ball vertically by its velocity
-    for (int i=0;i<n;i++) // check vertical collisions of ball with each block
-        if ( FloatRect(x+BALL_COLL_OFFSET_X, y+BALL_COLL_OFFSET_Y, BALL_COLL_WIDTH, BALL_COLL_HEIGHT).intersects(block[i].getGlobalBounds()) ) 
-             {block[i].setPosition(BLOCK_REMOVED_X,0); dy=-dy;} // if hit, "remove" block and reverse vertical velocity
+    // Vertical movement step
+    ballPosY += ballVelY; // move ball vertically by its velocity
+    // collision rectangle updated for vertical check
+    FloatRect ballCollisionRectV(ballPosX + BALL_COLL_OFFSET_X, ballPosY + BALL_COLL_OFFSET_Y, BALL_COLL_WIDTH, BALL_COLL_HEIGHT);
+    for (int i=0;i<blockCount;i++) // check vertical collisions of ball with each block
+        if ( ballCollisionRectV.intersects(block[i].getGlobalBounds()) ) 
+             {block[i].setPosition(BLOCK_REMOVED_X,0); ballVelY = -ballVelY;} // if hit, "remove" block and reverse vertical velocity
 
-    if (x<0 || x>WINDOW_WIDTH)  dx=-dx; // bounce on left/right edges
-    if (y<0 || y>WINDOW_HEIGHT)  dy=-dy; // bounce on top/bottom edges
+    // screen boundary checks
+    if (ballPosX < 0 || ballPosX > WINDOW_WIDTH)  ballVelX = -ballVelX; // bounce on left/right edges
+    if (ballPosY < 0 || ballPosY > WINDOW_HEIGHT)  ballVelY = -ballVelY; // bounce on top/bottom edges
 
     // player input
     if (Keyboard::isKeyPressed(Keyboard::Right)) sPaddle.move(PADDLE_MOVE_SPEED,0);
     if (Keyboard::isKeyPressed(Keyboard::Left)) sPaddle.move(-PADDLE_MOVE_SPEED,0);
 
+    // prepare paddle bounds for collision test
+    FloatRect paddleBounds = sPaddle.getGlobalBounds();
     // if ball intersects paddle, change vertical velocity to a negative random value
-    if ( FloatRect(x, y, BALL_DRAW_WIDTH, BALL_DRAW_HEIGHT).intersects(sPaddle.getGlobalBounds()) ) dy=-(rand()%BOUNCE_RAND_RANGE + BOUNCE_RAND_MIN);
+    FloatRect ballDrawRect(x, y, BALL_DRAW_WIDTH, BALL_DRAW_HEIGHT);
+    if ( ballDrawRect.intersects(paddleBounds) ) ballVelY = -(rand() % BOUNCE_RAND_RANGE + BOUNCE_RAND_MIN);
 
     sBall.setPosition(x,y); // update sprite position
 
@@ -101,7 +111,7 @@ int arkanoid()
     app.draw(sBall); // draw ball
     app.draw(sPaddle); // draw paddle
 
-    for (int i=0;i<n;i++) // draw all block sprites
+    for (int i=0;i<blockCount;i++) // draw all block sprites
      app.draw(block[i]);
 
     app.display();
