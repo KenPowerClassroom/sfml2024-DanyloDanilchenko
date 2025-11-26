@@ -26,3 +26,20 @@ TEST(ArkanoidCollision, CheckBlockCollisions) {
     EXPECT_FALSE(blocks[0].alive);
     EXPECT_FLOAT_EQ(-4.f, vel);
 }
+
+// updatePhysics bounces on window edges
+TEST(ArkanoidCollision, UpdatePhysicsBounceOnEdges) {
+    std::vector<Block> blocks;
+
+    float blockX = 515.f;
+    float blockY = 10.f;
+    float velocityX = 10.f;
+    float velocityY = -3.f;
+
+    updatePhysics(blockX, blockY, velocityX, velocityY, blocks, 16.f, 8.f,
+        0.f, 0.f, 6.f, 6.f,
+        520, 450);
+
+    EXPECT_EQ(-10.f, velocityX);
+    EXPECT_EQ(-3.f, velocityY);
+}
