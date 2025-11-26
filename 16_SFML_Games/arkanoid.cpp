@@ -36,6 +36,73 @@ void createBlocks(Sprite blocks[], int &blockCount, Texture &blockTex,
         }
 }
 
+void handleInput(Sprite &sPaddle, float paddleMoveSpeed)
+{
+    if (Keyboard::isKeyPressed(Keyboard::Right))
+        sPaddle.move(paddleMoveSpeed, 0);
+    if (Keyboard::isKeyPressed(Keyboard::Left))
+        sPaddle.move(-paddleMoveSpeed, 0);
+}
+
+// move ball and detect collisions with blocks and screen bounds
+void updatePhysics(float &ballPosX, float &ballPosY, float &ballVelX, float &ballVelY,
+                   Sprite blocks[], int blockCount,
+                   int blockRemovedX,
+                   float ballCollOffsetX, float ballCollOffsetY, float ballCollW, float ballCollH,
+                   int windowWidth, int windowHeight)
+{
+    // Horizontal movement step
+    ballPosX += ballVelX; // move ball horizontally
+    FloatRect ballCollisionRectH(ballPosX + ballCollOffsetX, ballPosY + ballCollOffsetY, ballCollW, ballCollH);
+    for (int i = 0; i < blockCount; i++) // check horizontal collisions
+        if (ballCollisionRectH.intersects(blocks[i].getGlobalBounds()))
+        {
+            blocks[i].setPosition(blockRemovedX, 0);
+            ballVelX = -ballVelX;
+        }
+
+    // Vertical movement step
+    ballPosY += ballVelY; // move ball vertically
+    FloatRect ballCollisionRectV(ballPosX + ballCollOffsetX, ballPosY + ballCollOffsetY, ballCollW, ballCollH);
+    for (int i = 0; i < blockCount; i++) // check vertical collisions
+        if (ballCollisionRectV.intersects(blocks[i].getGlobalBounds()))
+        {
+            blocks[i].setPosition(blockRemovedX, 0);
+            ballVelY = -ballVelY;
+        }
+
+    // screen boundary checks
+    if (ballPosX < 0 || ballPosX > windowWidth)
+        ballVelX = -ballVelX; // bounce on left/right edges
+    if (ballPosY < 0 || ballPosY > windowHeight)
+        ballVelY = -ballVelY; // bounce on top/bottom edges
+}
+
+void handlePaddleCollision(float &ballPosX, float &ballPosY, float &ballVelY,
+                           const Sprite &sPaddle,
+                           float ballDrawW, float ballDrawH,
+                           int bounceRandRange, int bounceRandMin)
+{
+    FloatRect paddleBounds = sPaddle.getGlobalBounds();
+    FloatRect ballDrawRect(ballPosX, ballPosY, ballDrawW, ballDrawH);
+    if (ballDrawRect.intersects(paddleBounds))
+        ballVelY = -(rand() % bounceRandRange + bounceRandMin);
+}
+
+// Draw the current frame
+void drawFrame(RenderWindow &app, Sprite &sBackground, Sprite &sBall, Sprite &sPaddle, Sprite blocks[], int blockCount)
+{
+    app.clear();
+    app.draw(sBackground);
+    app.draw(sBall);
+    app.draw(sPaddle);
+
+    for (int i = 0; i < blockCount; i++)
+        app.draw(blocks[i]);
+
+    app.display();
+}
+
 int arkanoid()
 {
     srand(time(0)); // seed random number generator
@@ -101,58 +168,25 @@ int arkanoid()
                 app.close(); // exit
         }
 
-        // Horizontal movement step
-        ballPosX += ballVelX; // move ball horizontally by its velocity
-        // create a collision rectangle for the ball based on current position (horizontal)
-        FloatRect ballCollisionRectH(ballPosX + BALL_COLL_OFFSET_X, ballPosY + BALL_COLL_OFFSET_Y, BALL_COLL_WIDTH, BALL_COLL_HEIGHT);
-        for (int i = 0; i < blockCount; i++) // check horizontal collisions of ball with each block
-            if (ballCollisionRectH.intersects(block[i].getGlobalBounds()))
-            {
-                block[i].setPosition(BLOCK_REMOVED_X, 0);
-                ballVelX = -ballVelX;
-            } // if hit, "remove" block and reverse horizontal velocity
+        // Update movement and block collisions
+        updatePhysics(ballPosX, ballPosY, ballVelX, ballVelY,
+                      block, blockCount,
+                      BLOCK_REMOVED_X,
+                      BALL_COLL_OFFSET_X, BALL_COLL_OFFSET_Y, BALL_COLL_WIDTH, BALL_COLL_HEIGHT,
+                      WINDOW_WIDTH, WINDOW_HEIGHT);
 
-        // Vertical movement step
-        ballPosY += ballVelY; // move ball vertically by its velocity
-        // collision rectangle updated for vertical check
-        FloatRect ballCollisionRectV(ballPosX + BALL_COLL_OFFSET_X, ballPosY + BALL_COLL_OFFSET_Y, BALL_COLL_WIDTH, BALL_COLL_HEIGHT);
-        for (int i = 0; i < blockCount; i++) // check vertical collisions of ball with each block
-            if (ballCollisionRectV.intersects(block[i].getGlobalBounds()))
-            {
-                block[i].setPosition(BLOCK_REMOVED_X, 0);
-                ballVelY = -ballVelY;
-            } // if hit, "remove" block and reverse vertical velocity
+        // player input 
+        handleInput(sPaddle, PADDLE_MOVE_SPEED);
 
-        // screen boundary checks
-        if (ballPosX < 0 || ballPosX > WINDOW_WIDTH)
-            ballVelX = -ballVelX; // bounce on left/right edges
-        if (ballPosY < 0 || ballPosY > WINDOW_HEIGHT)
-            ballVelY = -ballVelY; // bounce on top/bottom edges
-
-        // player input
-        if (Keyboard::isKeyPressed(Keyboard::Right))
-            sPaddle.move(PADDLE_MOVE_SPEED, 0);
-        if (Keyboard::isKeyPressed(Keyboard::Left))
-            sPaddle.move(-PADDLE_MOVE_SPEED, 0);
-
-        // prepare paddle bounds for collision test
-        FloatRect paddleBounds = sPaddle.getGlobalBounds();
-        // if ball intersects paddle, change vertical velocity to a negative random value
-        FloatRect ballDrawRect(ballPosX, ballPosY, BALL_DRAW_WIDTH, BALL_DRAW_HEIGHT);
-        if (ballDrawRect.intersects(paddleBounds))
-            ballVelY = -(rand() % BOUNCE_RAND_RANGE + BOUNCE_RAND_MIN);
+        // Handle ball-paddle collision
+        handlePaddleCollision(ballPosX, ballPosY, ballVelY, sPaddle,
+                              BALL_DRAW_WIDTH, BALL_DRAW_HEIGHT,
+                              BOUNCE_RAND_RANGE, BOUNCE_RAND_MIN);
 
         sBall.setPosition(ballPosX, ballPosY); // update sprite position
 
-        app.clear();
-        app.draw(sBackground); // draw background
-        app.draw(sBall);        // draw ball
-        app.draw(sPaddle);      // draw paddle
-
-        for (int i = 0; i < blockCount; i++) // draw all block sprites
-            app.draw(block[i]);
-
-        app.display();
+        // draw everything
+        drawFrame(app, sBackground, sBall, sPaddle, block, blockCount);
     }
 
     return 0;
